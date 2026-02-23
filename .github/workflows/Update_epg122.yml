@@ -1,0 +1,35 @@
+name: Aggiorna EPG Cusano TV
+on:
+  schedule:
+    - cron: '0 0 * * *' # Viene eseguito ogni notte a mezzanotte
+  workflow_dispatch: # Permette di avviarlo manualmente per test
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Installa il grabber
+        run: npm install -g epg-grabber
+
+      - name: Scarica EPG di Cusano
+        run: |
+          # Cloniamo solo il necessario per avere i file di configurazione di Zappr/IPTV-org
+          git clone --depth 1 https://github.com/ZapprTV/EPG.git temp_zappr
+          # Eseguiamo il grabber puntando al file specifico che mi hai linkato
+          npx epg-grabber --config=temp_zappr/sites/cusanoitaliatv.it/cusanoitaliatv.it.config.js --output=cusano.xml
+
+      - name: Carica il file nel repository
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add cusano.xml
+          git commit -m "Aggiornamento automatico EPG: $(date)" || exit 0
+          git push
